@@ -1,0 +1,10 @@
+{
+  "name": "Nesting Champions",
+  "short_name": "Nesting Champions",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#010a18",
+  "theme_color": "#010a18",
+  "description": "Michael & Son nesting team game prototype",
+  "orientation": "landscape"
+}
