@@ -1,0 +1,17 @@
+V12.1 READABILITY FIX
+
+Changed form-field theming so admin dialogs no longer inherit gold borders/labels.
+
+New field colors:
+- enabled border: soft blue-gray
+- focused border: Michael & Son blue
+- label: navy
+- focused/floating label: blue
+- suffix values such as %: navy
+- entered text: navy
+- errors: red
+
+Patched files:
+- lib/app.dart
+- lib/screens/admin/admin_image_scaffold.dart
+- lib/screens/admin/admin_settings_page.dart

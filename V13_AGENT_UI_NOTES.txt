@@ -1,0 +1,10 @@
+V13 Agent UI update
+
+Built on V12.2 login overlay fix.
+
+Updated agent artwork + Flutter overlays:
+- Agent Dashboard: clean artwork, Flutter sidebar, live booking/activity counts, leaderboard, activity, reward summary/actions.
+- My Bookings: clean artwork, Flutter sidebar, real ServiceTitan link input, booking-type dropdown, submit action, search, and Supabase booking history.
+- My Cards: clean artwork, Flutter sidebar, active saved-card details, clickable saved-card slot, empty slot widgets, usage/reminder text.
+
+All new light-page interactive elements use navy / baby blue / white with gold used only as a decorative accent.

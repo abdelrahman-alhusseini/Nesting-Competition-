@@ -1,0 +1,24 @@
+V14.1 Activity Feed Fix
+=======================
+
+Agent-facing Activity Feed now shows card/game activity only.
+
+Shown event types:
+- card_drawn
+- special_card_drawn
+- even_card_resolved
+- special_card_saved
+- special_card_expired
+- future card_used/card_applied/special_card_used/special_card_applied events
+
+Hidden from the agent Activity Feed:
+- booking_submitted
+- booking_approved
+- booking_rejected
+- booking_reversed
+- manual_draw_granted
+- points_adjusted
+- unrelated system/audit events
+
+Player names are loaded from public.profiles through activity_events.actor_id.
+The admin dashboard's full activity count remains unchanged.

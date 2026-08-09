@@ -1,0 +1,69 @@
+MICHAEL & SON NESTING CHAMPIONS - V11 APPROVED ADMIN ARTWORK BUILD
+=================================================================
+
+WHAT CHANGED
+------------
+The approved 1672 x 941 artwork is now used as the actual full-screen visual
+layer for these admin pages:
+
+- Admin Dashboard
+- Booking Approvals
+- Users Management
+- Adjust Points
+- Audit History
+- Admin Settings
+
+The artwork is decorative only where data/actions change. Flutter renders the
+real navigation, searches, filters, tables, database values, dropdowns,
+buttons, dialogs and forms. Supabase remains the source of live data.
+
+ADMIN INTERACTIONS
+------------------
+- Dashboard overview values come from Supabase/controller data.
+- Dashboard Quick Actions are real Flutter hotspots and navigate correctly.
+- Booking Reviews use real pending bookings.
+- Booking Approvals has real search, booking-type filter, selection,
+  corrected booking type, Approve and Reject actions.
+- Users has real search/role/status filters, Add User, Enable/Disable,
+  Edit Username and Change Password.
+- Adjust Points opens a themed Flutter dialog from Select User, uses the real
+  leaderboard, writes through admin_adjust_points and shows audit history.
+- Audit History has real search/action filters and a detail panel.
+- Settings uses themed Flutter Configure buttons/dialogs. Real game_settings
+  percentages and limits are edited through Supabase. Modules unsupported by
+  the existing schema show an honest themed information dialog rather than
+  saving fake values.
+- Manual Draw / Test Cards from the previous working build are preserved.
+- Existing agent pages are preserved for the next image-by-image design pass.
+
+FIRST RUN
+---------
+Open THIS folder in VS Code (pubspec.yaml should be directly visible), then:
+
+flutter clean
+flutter pub get
+flutter analyze
+flutter run -d chrome
+
+IMPORTANT: EDIT USERNAME / CHANGE PASSWORD
+------------------------------------------
+These two admin actions must update Supabase Auth securely, so V11 adds the
+Edge Function:
+
+supabase/functions/update-user/index.ts
+
+If that function has not been deployed to your Supabase project yet, deploy it
+once from the project root after linking the Supabase CLI project:
+
+supabase functions deploy update-user
+
+Do NOT put a service-role/secret key in Flutter. The Edge Function uses the
+server-side Supabase secret, which is the correct architecture.
+
+ARTWORK
+-------
+Runtime copies:
+assets/images/v11/
+
+Reference copies:
+design_reference/v11/

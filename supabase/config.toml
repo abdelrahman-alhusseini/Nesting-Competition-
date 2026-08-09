@@ -1,0 +1,7 @@
+project_id = "michael-son-nesting-champions"
+
+[functions.create-user]
+verify_jwt = true
+
+[functions.update-user]
+verify_jwt = true

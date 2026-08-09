@@ -1,0 +1,14 @@
+V8 STEP 1 LOGIN - FLAT/FIXED PACKAGE
+
+The previous ZIP accidentally placed the actual Flutter project inside an extra
+build_v8_login_step1 folder. Running `flutter analyze` from the outer folder
+made Dart analyze source files without using the project's pubspec.yaml, which
+caused package:supabase_flutter to appear missing.
+
+This ZIP is flat:
+- pubspec.yaml is directly in the extracted folder.
+- supabase_flutter: ^2.15.4 is present under dependencies.
+- run_web.bat performs flutter clean + flutter pub get before launching.
+- analyze_project.bat does the same before flutter analyze.
+
+Start by double-clicking run_web.bat.
