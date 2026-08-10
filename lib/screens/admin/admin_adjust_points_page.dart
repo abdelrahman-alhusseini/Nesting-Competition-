@@ -24,7 +24,7 @@ class _AdminAdjustPointsPageState extends State<AdminAdjustPointsPage> {
   @override
   Widget build(BuildContext context) {
     final List<UserProfile> agents = controller.users.where((u) => u.role == AppRole.agent && u.isActive).toList();
-    final List<LeaderboardEntry> leaderboard = controller.leaderboard.take(10).toList();
+    final List<LeaderboardEntry> leaderboard = controller.leaderboard.toList();
     final List<Map<String, dynamic>> history = controller.auditHistory
         .where((item) => (item['action'] as String?) == 'points_adjusted')
         .take(8)
@@ -230,26 +230,29 @@ class _LeaderboardTable extends StatelessWidget {
           ),
         ),
         Expanded(
-          child: ListView.separated(
-            itemCount: entries.length,
-            separatorBuilder: (_, __) => const Divider(height: 1, color: adminBorder),
-            itemBuilder: (BuildContext context, int index) {
-              final LeaderboardEntry entry = entries[index];
-              return SizedBox(
-                height: 44,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  child: Row(
-                    children: <Widget>[
-                      SizedBox(width: 75, child: Text('#${entry.rank}', style: const TextStyle(color: adminNavy, fontWeight: FontWeight.w900, fontSize: 11))),
-                      Expanded(flex: 3, child: Text(entry.displayName, overflow: TextOverflow.ellipsis, style: const TextStyle(color: adminNavy, fontWeight: FontWeight.w700, fontSize: 11))),
-                      Expanded(flex: 2, child: Text(entry.title, style: const TextStyle(color: adminMuted, fontSize: 11))),
-                      SizedBox(width: 110, child: Text('${entry.score}', style: const TextStyle(color: adminBlue, fontWeight: FontWeight.w900, fontSize: 12))),
-                    ],
+          child: Scrollbar(
+            thumbVisibility: entries.length > 6,
+            child: ListView.separated(
+              itemCount: entries.length,
+              separatorBuilder: (_, __) => const Divider(height: 1, color: adminBorder),
+              itemBuilder: (BuildContext context, int index) {
+                final LeaderboardEntry entry = entries[index];
+                return SizedBox(
+                  height: 44,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    child: Row(
+                      children: <Widget>[
+                        SizedBox(width: 75, child: Text('#${entry.rank}', style: const TextStyle(color: adminNavy, fontWeight: FontWeight.w900, fontSize: 11))),
+                        Expanded(flex: 3, child: Text(entry.displayName, overflow: TextOverflow.ellipsis, style: const TextStyle(color: adminNavy, fontWeight: FontWeight.w700, fontSize: 11))),
+                        Expanded(flex: 2, child: Text(entry.title, style: const TextStyle(color: adminMuted, fontSize: 11))),
+                        SizedBox(width: 110, child: Text('${entry.score}', style: const TextStyle(color: adminBlue, fontWeight: FontWeight.w900, fontSize: 12))),
+                      ],
+                    ),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
         ),
       ],

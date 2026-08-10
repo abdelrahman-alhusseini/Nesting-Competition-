@@ -1,6 +1,0 @@
-{
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "git clone https://github.com/flutter/flutter.git --depth 1 -b stable /tmp/flutter && /tmp/flutter/bin/flutter config --enable-web && /tmp/flutter/bin/flutter pub get",
-  "buildCommand": "/tmp/flutter/bin/flutter build web --release",
-  "outputDirectory": "build/web"
-}

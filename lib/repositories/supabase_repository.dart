@@ -167,11 +167,16 @@ class SupabaseRepository {
   Future<List<PendingDrawRecord>> getMyPendingDraws() async {
     final String? userId = currentUser?.id;
     if (userId == null) return <PendingDrawRecord>[];
+
+    // Commit stale-draw cleanup first, then only return still-valid draws.
+    await _client.rpc('expire_my_pending_draws');
+    final String nowIso = DateTime.now().toUtc().toIso8601String();
     final List<dynamic> data = await _client
         .from('pending_draws')
-        .select('id, booking_type, created_at')
+        .select('id, booking_type, created_at, expires_at')
         .eq('agent_id', userId)
         .eq('status', 'pending')
+        .gt('expires_at', nowIso)
         .order('created_at');
     return data
         .map((dynamic row) => PendingDrawRecord.fromJson(row as Map<String, dynamic>))
@@ -200,30 +205,80 @@ class SupabaseRepository {
     return DrawResult.fromJson((data as List<dynamic>).first as Map<String, dynamic>);
   }
 
-  Future<void> saveSpecialCard({
+  Future<String> saveSpecialCard({
     required String cardDrawId,
     required bool replaceExisting,
   }) async {
-    await _client.rpc(
+    final dynamic data = await _client.rpc(
       'save_special_card',
       params: <String, dynamic>{
         'p_card_draw_id': cardDrawId,
         'p_replace_existing': replaceExisting,
       },
     );
+    return data as String;
   }
 
-  Future<SavedSpecialCard?> getMySavedSpecialCard() async {
+  Future<List<SavedSpecialCard>> getMySavedSpecialCards() async {
+    final String? userId = currentUser?.id;
+    if (userId == null) return <SavedSpecialCard>[];
+    final List<dynamic> data = await _client
+        .from('saved_special_cards')
+        .select('id, card_draw_id, card_code, metadata, bookings_remaining, created_at')
+        .eq('owner_id', userId)
+        .eq('status', 'active')
+        .order('created_at');
+    return data
+        .map((dynamic row) => SavedSpecialCard.fromJson(row as Map<String, dynamic>))
+        .toList();
+  }
+
+
+  Future<DrawResult?> getMyAwaitingSpecialDraw() async {
     final String? userId = currentUser?.id;
     if (userId == null) return null;
     final List<dynamic> data = await _client
-        .from('saved_special_cards')
-        .select('id, card_code, metadata, bookings_remaining')
-        .eq('owner_id', userId)
-        .eq('status', 'active')
+        .from('card_draws')
+        .select('id, title, description, tone, points_delta, card_number, can_gamble')
+        .eq('agent_id', userId)
+        .eq('status', 'awaiting_storage')
+        .eq('is_special', true)
+        .order('created_at', ascending: false)
         .limit(1);
     if (data.isEmpty) return null;
-    return SavedSpecialCard.fromJson(data.first as Map<String, dynamic>);
+    final Map<String, dynamic> row = data.first as Map<String, dynamic>;
+    return DrawResult.fromJson(<String, dynamic>{
+      'card_draw_id': row['id'],
+      'title': row['title'],
+      'description': row['description'],
+      'tone': row['tone'],
+      'points': row['points_delta'],
+      'number': row['card_number'],
+      'can_gamble': row['can_gamble'],
+    });
+  }
+
+  Future<int> getMyShieldCharges() async {
+    final dynamic data = await _client.rpc('get_my_shield_charges');
+    return (data as num?)?.toInt() ?? 0;
+  }
+
+  Future<SpecialCardUseResult> useSpecialCard({
+    required String savedCardId,
+    String? targetId,
+  }) async {
+    final dynamic data = await _client.rpc(
+      'use_special_card',
+      params: <String, dynamic>{
+        'p_saved_card_id': savedCardId,
+        'p_target_id': targetId,
+      },
+    );
+    final List<dynamic> rows = data as List<dynamic>;
+    if (rows.isEmpty) {
+      throw Exception('The special-card action returned no result.');
+    }
+    return SpecialCardUseResult.fromJson(rows.first as Map<String, dynamic>);
   }
 
   Future<void> manualGrantDraw({
@@ -290,10 +345,12 @@ class SupabaseRepository {
   }
 
   Future<int> getAdminPendingDrawCount() async {
+    final String nowIso = DateTime.now().toUtc().toIso8601String();
     final List<dynamic> data = await _client
         .from('pending_draws')
         .select('id')
-        .eq('status', 'pending');
+        .eq('status', 'pending')
+        .gt('expires_at', nowIso);
     return data.length;
   }
 
@@ -320,6 +377,23 @@ class SupabaseRepository {
         .order('created_at', ascending: false)
         .limit(100);
     return data.cast<Map<String, dynamic>>();
+  }
+}
+
+class SpecialCardUseResult {
+  const SpecialCardUseResult({
+    required this.message,
+    required this.shieldBlocked,
+  });
+
+  final String message;
+  final bool shieldBlocked;
+
+  factory SpecialCardUseResult.fromJson(Map<String, dynamic> json) {
+    return SpecialCardUseResult(
+      message: (json['message'] as String?) ?? 'Special card used.',
+      shieldBlocked: (json['shield_blocked'] as bool?) ?? false,
+    );
   }
 }
 

@@ -1,0 +1,10 @@
+V14.4
+
+- Agent leaderboard now renders the full list inside a scrollable table.
+- Saved special cards: maximum 3 active cards per user.
+- A 4th newly drawn special card is NOT discarded. Supabase keeps it in awaiting_storage and tells the user to use one of the 3 saved cards first.
+- My Cards shows the three usable saved-card slots and lets the user choose which saved card to use.
+- After freeing a saved-card slot while a newly drawn special card is waiting, the app returns to Card Reveal so the player can save it.
+- Pending draws still expire after 24 hours, with warnings starting in the final 4 hours on the Dashboard and Draw Cards pages.
+
+EXISTING DATABASE: run APPLY_V14_4_SAVED_CARDS_AND_WARNINGS.sql once in Supabase SQL Editor after the V14.3 SQL.

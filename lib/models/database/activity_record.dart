@@ -27,6 +27,8 @@ class ActivityRecord {
     'card_applied',
     'special_card_used',
     'special_card_applied',
+    'shield_activated',
+    'shield_triggered',
   };
 
   bool get isAgentGameActivity => agentGameEventTypes.contains(eventType);
@@ -57,6 +59,10 @@ class ActivityRecord {
       case 'card_used':
       case 'card_applied':
         return _replaceGenericPlayer(message, player, fallback: '$player used a card.');
+      case 'shield_activated':
+        return '$player activated a Shield.';
+      case 'shield_triggered':
+        return "$player's Shield blocked a negative effect.";
       case 'special_card_used':
       case 'special_card_applied':
         return _replaceGenericPlayer(

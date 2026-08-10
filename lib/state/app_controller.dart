@@ -54,10 +54,12 @@ class AppController extends ChangeNotifier {
   List<LeaderboardEntry> _leaderboard = <LeaderboardEntry>[];
   List<UserProfile> _users = <UserProfile>[];
   List<Map<String, dynamic>> _auditHistory = <Map<String, dynamic>>[];
-  SavedSpecialCard? _savedSpecialCard;
+  List<SavedSpecialCard> _savedSpecialCards = <SavedSpecialCard>[];
   AdminStats _adminStats = const AdminStats();
   GameSettings? _gameSettings;
   int _adminPendingDrawCount = 0;
+  int _shieldCharges = 0;
+  String? _lastSpecialActionMessage;
 
   bool get databaseConfigured => _repository != null;
   bool get initializing => _initializing;
@@ -76,6 +78,11 @@ class AppController extends ChangeNotifier {
   String? get lastError => _lastError;
   int get agentScore => _profile?.score ?? 0;
   int get pendingDraws => _pendingDrawRecords.length;
+  List<PendingDrawRecord> get pendingDrawRecords =>
+      List<PendingDrawRecord>.unmodifiable(_pendingDrawRecords);
+  int get shieldCharges => _shieldCharges;
+  bool get shieldActive => _shieldCharges > 0;
+  String? get lastSpecialActionMessage => _lastSpecialActionMessage;
   // Full public activity remains available for admin stats/overview.
   List<String> get activity =>
       _activityRecords.map((ActivityRecord item) => item.message).toList(growable: false);
@@ -98,7 +105,21 @@ class AppController extends ChangeNotifier {
   List<UserProfile> get users => List<UserProfile>.unmodifiable(_users);
   List<Map<String, dynamic>> get auditHistory =>
       List<Map<String, dynamic>>.unmodifiable(_auditHistory);
-  SavedSpecialCard? get savedSpecialCard => _savedSpecialCard;
+  List<SavedSpecialCard> get savedSpecialCards =>
+      List<SavedSpecialCard>.unmodifiable(_savedSpecialCards);
+  SavedSpecialCard? get savedSpecialCard =>
+      _savedSpecialCards.isEmpty ? null : _savedSpecialCards.first;
+  int get savedSpecialCardCount => _savedSpecialCards.length;
+  bool get savedSpecialCardsFull => _savedSpecialCards.length >= 3;
+  SavedSpecialCard? get currentDrawSavedSpecialCard {
+    final String? drawId = _currentCardDrawId;
+    if (drawId == null) return null;
+    for (final SavedSpecialCard card in _savedSpecialCards) {
+      if (card.cardDrawId == drawId) return card;
+    }
+    return null;
+  }
+
   AdminStats get adminStats => _adminStats;
   GameSettings? get gameSettings => _gameSettings;
   int get adminPendingDrawCount => _adminPendingDrawCount;
@@ -214,10 +235,12 @@ class AppController extends ChangeNotifier {
     _leaderboard = <LeaderboardEntry>[];
     _users = <UserProfile>[];
     _auditHistory = <Map<String, dynamic>>[];
-    _savedSpecialCard = null;
+    _savedSpecialCards = <SavedSpecialCard>[];
     _adminStats = const AdminStats();
     _gameSettings = null;
     _adminPendingDrawCount = 0;
+    _shieldCharges = 0;
+    _lastSpecialActionMessage = null;
     notifyListeners();
   }
 
@@ -237,11 +260,23 @@ class AppController extends ChangeNotifier {
         final List<dynamic> results = await Future.wait<dynamic>(<Future<dynamic>>[
           repository.getMyBookings(),
           repository.getMyPendingDraws(),
-          repository.getMySavedSpecialCard(),
+          repository.getMySavedSpecialCards(),
+          repository.getMyShieldCharges(),
+          repository.getMyAwaitingSpecialDraw(),
         ]);
         _myBookings = results[0] as List<BookingRecord>;
         _pendingDrawRecords = results[1] as List<PendingDrawRecord>;
-        _savedSpecialCard = results[2] as SavedSpecialCard?;
+        _savedSpecialCards = results[2] as List<SavedSpecialCard>;
+        _shieldCharges = results[3] as int;
+        final DrawResult? awaitingSpecial = results[4] as DrawResult?;
+        if (awaitingSpecial != null && _currentCardDrawId == null) {
+          _currentOutcome = awaitingSpecial.outcome;
+          _currentCardDrawId = awaitingSpecial.cardDrawId;
+          _specialStoragePending = true;
+          if (_agentPage == AgentPage.dashboard) {
+            _agentPage = AgentPage.cardReveal;
+          }
+        }
       } else if (_role == AppRole.admin) {
         final List<dynamic> results = await Future.wait<dynamic>(<Future<dynamic>>[
           repository.getPendingBookings(),
@@ -525,10 +560,45 @@ class AppController extends ChangeNotifier {
     try {
       await repository.saveSpecialCard(
         cardDrawId: cardDrawId,
-        replaceExisting: replaceExisting,
+        replaceExisting: false,
       );
       _specialStoragePending = false;
       await refreshAll();
+      return null;
+    } catch (error) {
+      return _friendlyError(error);
+    } finally {
+      _setBusy(false);
+    }
+  }
+
+  Future<String?> useSavedSpecialCard({
+    required String savedCardId,
+    String? targetId,
+  }) async {
+    final SupabaseRepository? repository = _repository;
+    if (repository == null) return 'Supabase is not configured.';
+    SavedSpecialCard? card;
+    for (final SavedSpecialCard item in _savedSpecialCards) {
+      if (item.id == savedCardId) {
+        card = item;
+        break;
+      }
+    }
+    if (card == null) return 'That saved special card is no longer available.';
+
+    _setBusy(true);
+    try {
+      final SpecialCardUseResult result = await repository.useSpecialCard(
+        savedCardId: card.id,
+        targetId: targetId,
+      );
+      _lastSpecialActionMessage = result.message;
+      await refreshAll();
+      if (_specialStoragePending && _currentCardDrawId != null) {
+        _agentPage = AgentPage.cardReveal;
+      }
+      _audio.special();
       return null;
     } catch (error) {
       return _friendlyError(error);
@@ -701,13 +771,13 @@ class AppController extends ChangeNotifier {
         tone: CardTone.special,
       ),
       const CardOutcome(
-        title: 'Move Another Player 2 Ranks',
-        description: 'Choose a player and move them up or down two positions.',
+        title: 'Move Another Player Down 2 Ranks',
+        description: 'Choose another player and knock them down two leaderboard positions.',
         tone: CardTone.special,
       ),
       const CardOutcome(
         title: 'Shield',
-        description: 'Block the next special-card attack against you.',
+        description: 'Block your next negative card, gamble loss, or special-card attack.',
         tone: CardTone.special,
       ),
     ];

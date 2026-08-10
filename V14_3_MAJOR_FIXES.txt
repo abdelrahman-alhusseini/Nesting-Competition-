@@ -1,0 +1,27 @@
+Michael & Son Nesting Champions — V14.3 Major Gameplay Fixes
+
+1. ADMIN LEADERBOARD
+- Admin Adjust Points leaderboard now renders the complete leaderboard in a scrollable table instead of truncating the player list.
+
+2. PENDING DRAWS — 24 HOUR WINDOW
+- Approving multiple bookings no longer discards older pending draws because of a count limit.
+- Every approved/manual draw gets its own 24-hour expiry timestamp.
+- Expired draws are cleaned up automatically when the agent refreshes/loads pending draws.
+- The Draw Cards page shows how long the oldest available draw has left.
+
+3. SPECIAL CARD USE
+- Use Card now opens an in-place Flutter dialog instead of navigating the player to a separate special-card page.
+- Targeted cards let the player choose the target directly from the live leaderboard.
+- Supported targeted cards: Move Another Player Down 2 Ranks, Transfer 5 Points, Rank Swap.
+- Self cards apply immediately to the current player.
+
+4. SHIELD
+- Shield can be activated on yourself.
+- It is one-use and automatically blocks the next negative effect.
+- It blocks targeted special-card attacks, Reverse/-1 results, and a -6 even-number gamble loss.
+- After blocking one negative effect the Shield charge is consumed.
+
+IMPORTANT EXISTING SUPABASE DATABASE STEP
+Run APPLY_V14_3_MAJOR_FIXES_IN_SUPABASE.sql once in Supabase SQL Editor before testing V14.3.
+
+Flutter SDK is not installed in the packaging environment, so flutter analyze/build was not run here. ZIP integrity is checked separately.

@@ -65,7 +65,7 @@ create table public.competition_members (
 create table public.game_settings (
   competition_id uuid primary key references public.competitions(id) on delete cascade,
   max_pending_draws integer not null default 3 check (max_pending_draws between 1 and 20),
-  max_saved_special_cards integer not null default 1 check (max_saved_special_cards between 1 and 5),
+  max_saved_special_cards integer not null default 3 check (max_saved_special_cards between 1 and 3),
   special_expiry_bookings integer not null default 5 check (special_expiry_bookings between 1 and 50),
   normal_special_chance numeric(5,4) not null default 0.05,
   cross_sell_special_chance numeric(5,4) not null default 0.50,
@@ -166,8 +166,8 @@ create table public.saved_special_cards (
   reversed_at timestamptz
 );
 
-create unique index one_active_special_card_per_user
-  on public.saved_special_cards(competition_id, owner_id)
+create index saved_special_cards_active_owner_idx
+  on public.saved_special_cards(competition_id, owner_id, created_at)
   where status = 'active';
 
 create table public.score_transactions (
@@ -1170,7 +1170,7 @@ $$;
 
 create or replace function public.save_special_card(
   p_card_draw_id uuid,
-  p_replace_existing boolean
+  p_replace_existing boolean default false
 )
 returns uuid
 language plpgsql
@@ -1179,9 +1179,10 @@ set search_path = public
 as $$
 declare
   v_draw public.card_draws%rowtype;
-  v_existing public.saved_special_cards%rowtype;
   v_expiry integer;
   v_saved_id uuid;
+  v_active_count integer;
+  v_max integer := 3;
 begin
   select * into v_draw
   from public.card_draws
@@ -1194,27 +1195,24 @@ begin
     raise exception 'This special card is not available to save';
   end if;
 
-  select * into v_existing
+  select least(coalesce(max_saved_special_cards, 3), 3), special_expiry_bookings
+  into v_max, v_expiry
+  from public.game_settings
+  where competition_id = v_draw.competition_id;
+
+  v_max := greatest(coalesce(v_max, 3), 1);
+
+  select count(*)::integer into v_active_count
   from public.saved_special_cards
   where competition_id = v_draw.competition_id
     and owner_id = v_draw.agent_id
-    and status = 'active'
-  for update;
+    and status = 'active';
 
-  if found and not p_replace_existing then
-    update public.card_draws set status = 'discarded', resolved_at = now() where id = v_draw.id;
-    return v_existing.id;
+  if v_active_count >= v_max then
+    -- IMPORTANT: do not change the card_draw status here. It stays awaiting_storage,
+    -- so the user can use a saved card, free a slot, and then save this same draw.
+    raise exception 'You already have % saved special cards. Use one before saving this card. Your newly drawn special card is safe and has NOT been discarded.', v_max;
   end if;
-
-  if found then
-    update public.saved_special_cards
-    set status = 'discarded', discarded_at = now()
-    where id = v_existing.id;
-  end if;
-
-  select special_expiry_bookings into v_expiry
-  from public.game_settings
-  where competition_id = v_draw.competition_id;
 
   insert into public.saved_special_cards (
     competition_id, owner_id, card_draw_id, card_code, metadata, bookings_remaining
@@ -1227,7 +1225,9 @@ begin
     coalesce(v_expiry, 5)
   ) returning id into v_saved_id;
 
-  update public.card_draws set status = 'stored', resolved_at = now() where id = v_draw.id;
+  update public.card_draws
+  set status = 'stored', resolved_at = now()
+  where id = v_draw.id;
 
   insert into public.activity_events (
     competition_id, actor_id, event_type, message, is_public, metadata

@@ -43,7 +43,7 @@ class GameSettings {
     return GameSettings(
       competitionId: (json['competition_id'] as String?) ?? '',
       maxPendingDraws: (json['max_pending_draws'] as num?)?.toInt() ?? 3,
-      maxSavedSpecialCards: (json['max_saved_special_cards'] as num?)?.toInt() ?? 1,
+      maxSavedSpecialCards: (json['max_saved_special_cards'] as num?)?.toInt() ?? 3,
       specialExpiryBookings: (json['special_expiry_bookings'] as num?)?.toInt() ?? 5,
       normalSpecialChance: asDouble(json['normal_special_chance'], 0.05),
       crossSellSpecialChance: asDouble(json['cross_sell_special_chance'], 0.50),

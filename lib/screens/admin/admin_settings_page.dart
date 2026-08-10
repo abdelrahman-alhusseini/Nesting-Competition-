@@ -181,7 +181,7 @@ class AdminSettingsPage extends StatelessWidget {
       title: 'Data & Security Rules',
       child: Column(
         children: <Widget>[
-          TextField(controller: saved, keyboardType: TextInputType.number, style: const TextStyle(color: adminNavy, fontWeight: FontWeight.w800), decoration: const InputDecoration(labelText: 'Max saved special cards')),
+          TextField(controller: saved, keyboardType: TextInputType.number, style: const TextStyle(color: adminNavy, fontWeight: FontWeight.w800), decoration: const InputDecoration(labelText: 'Max saved special cards (1–3)')),
           const SizedBox(height: 12),
           TextField(controller: expiry, keyboardType: TextInputType.number, style: const TextStyle(color: adminNavy, fontWeight: FontWeight.w800), decoration: const InputDecoration(labelText: 'Special card expiry (bookings)')),
           const SizedBox(height: 18),
@@ -193,7 +193,7 @@ class AdminSettingsPage extends StatelessWidget {
                   : () async {
                       final int? savedValue = int.tryParse(saved.text.trim());
                       final int? expiryValue = int.tryParse(expiry.text.trim());
-                      if (savedValue == null || savedValue < 0 || expiryValue == null || expiryValue < 1) {
+                      if (savedValue == null || savedValue < 1 || savedValue > 3 || expiryValue == null || expiryValue < 1) {
                         _snack(context, 'Enter valid whole numbers.', true);
                         return;
                       }
@@ -218,47 +218,29 @@ class AdminSettingsPage extends StatelessWidget {
   }
 
   Future<void> _showPendingDrawLimit(BuildContext context) async {
-    final GameSettings? base = controller.gameSettings;
-    if (base == null) {
-      _snack(context, 'No game_settings record is available in Supabase.', true);
-      return;
-    }
-    final value = TextEditingController(text: '${base.maxPendingDraws}');
     await showAdminDialog<void>(
       context: context,
       title: 'System & Maintenance',
-      child: Column(
-        children: <Widget>[
-          TextField(controller: value, keyboardType: TextInputType.number, style: const TextStyle(color: adminNavy, fontWeight: FontWeight.w800), decoration: const InputDecoration(labelText: 'Maximum pending draws per agent')),
-          const SizedBox(height: 18),
-          Align(
-            alignment: Alignment.centerRight,
-            child: FilledButton(
-              onPressed: controller.busy
-                  ? null
-                  : () async {
-                      final int? parsed = int.tryParse(value.text.trim());
-                      if (parsed == null || parsed < 1) {
-                        _snack(context, 'Enter a value of 1 or greater.', true);
-                        return;
-                      }
-                      final String? error = await controller.saveGameSettings(base.copyWith(maxPendingDraws: parsed));
-                      if (!context.mounted) return;
-                      if (error != null) {
-                        _snack(context, error, true);
-                        return;
-                      }
-                      Navigator.of(context).pop();
-                      _snack(context, 'Pending-draw limit updated.', false);
-                    },
-              style: adminPrimaryButtonStyle(),
-              child: const Text('Save'),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: adminBabyBlue,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: adminBorder),
+        ),
+        child: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text('Pending Draw Policy', style: TextStyle(color: adminNavy, fontWeight: FontWeight.w900, fontSize: 16)),
+            SizedBox(height: 10),
+            Text(
+              'Agents can hold any number of approved pending draws. Each draw expires exactly 24 hours after it is granted. Approving several bookings at once will no longer discard older draws.',
+              style: TextStyle(color: adminNavy, height: 1.5),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
-    value.dispose();
   }
 
   Future<void> _showInfo(BuildContext context, String title, String message) {
